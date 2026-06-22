@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Farm Click Survival</string>
+    <string name="action_harvest">Собрать урожай</string>
+    <string name="action_plant">Посадить</string>
+    <string name="action_repair">Ремонт</string>
+    <string name="action_feed">Кормить животных</string>
+    <string name="action_rest">Отдохнуть</string>
+</resources>
