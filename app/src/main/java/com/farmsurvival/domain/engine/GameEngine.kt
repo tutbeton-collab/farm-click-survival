@@ -104,13 +104,17 @@ object GameEngine {
             newResources = newResources.plus(Resources(energy = 10)).coerceAll()
         }
 
-        // Check game over
-        val isGameOver = !newResources.isAlive
+        // Check game over — no resources OR no action possible
+        val noActionPossible = GameAction.mainActions.none { action ->
+            canAfford(newResources, action.cost)
+        }
+        val isGameOver = !newResources.isAlive || noActionPossible
         val gameOverReason = if (isGameOver) {
             when {
                 newResources.energy <= 0 && newResources.food <= 0 -> "Вы выдохлись и голодны..."
                 newResources.energy <= 0 -> "Вы слишком устали для работы."
                 newResources.food <= 0 -> "Закончилась еда..."
+                noActionPossible -> "Недостаточно ресурсов для продолжения..."
                 else -> "Ферма разорена."
             }
         } else null
