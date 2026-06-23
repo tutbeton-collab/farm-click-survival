@@ -61,7 +61,6 @@ object GameEngine {
         }
 
         // Check if can afford
-        val afterCost = state.resources.minus(action.cost)
         if (!canAfford(state.resources, action.cost)) {
             return ActionResult(
                 state.copy(lastActionMessage = "Недостаточно ресурсов для: ${action.displayName}"),
@@ -71,9 +70,9 @@ object GameEngine {
         }
 
         // Apply action
-        var newResources = afterCost.plus(action.reward).coerceAll()
+        var newResources = state.resources.minus(action.cost).plus(action.reward).coerceAll()
         var newStats = updateStatistics(state.statistics, action)
-        var message = "${action.icon} ${action.displayName}: +${formatReward(action.reward)}"
+        var message = "${action.icon} ${action.displayName}"
         var isRandomEvent = false
 
         // Check for random event (20% chance)
@@ -94,13 +93,10 @@ object GameEngine {
 
         if (dayShouldAdvance) {
             newDay = state.day + 1
-            dailyMessage = dailyMessages.random()
+            dailyMessage = "День $newDay\n${dailyMessages.random()}"
 
-            // Daily upkeep: consume food
+            // Daily upkeep
             newResources = newResources.minus(Resources(food = 5)).coerceAll()
-            message += "\n📅 Наступил день $newDay! Потрачено 5 еды на проживание."
-
-            // Daily energy recovery
             newResources = newResources.plus(Resources(energy = 10)).coerceAll()
         }
 
