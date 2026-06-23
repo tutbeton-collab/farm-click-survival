@@ -58,12 +58,17 @@ fun GameScreen(
 
             // Content
             if (gameState.isGameOver) {
-                GameOverContent(gameState = gameState, onRestart = onRestart)
+                GameOverContent(
+                    gameState = gameState,
+                    onRestart = onRestart,
+                    modifier = Modifier.weight(1f)
+                )
             } else {
                 ActionsContent(
                     gameState = gameState,
                     onAction = onAction,
-                    lastMessage = gameState.lastActionMessage
+                    lastMessage = gameState.lastActionMessage,
+                    modifier = Modifier.weight(1f)
                 )
             }
         }
@@ -206,11 +211,12 @@ private fun ResourceItem(icon: String, label: String, value: Int, color: Color) 
 private fun ActionsContent(
     gameState: GameState,
     onAction: (GameAction) -> Unit,
-    lastMessage: String?
+    lastMessage: String?,
+    modifier: Modifier = Modifier
 ) {
     Column(
-        modifier = Modifier
-            .fillMaxSize()
+        modifier = modifier
+            .fillMaxWidth()
             .verticalScroll(rememberScrollState())
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -324,10 +330,11 @@ private fun ActionCard(
 @Composable
 private fun GameOverContent(
     gameState: GameState,
-    onRestart: () -> Unit
+    onRestart: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     Column(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxSize()
             .padding(32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
