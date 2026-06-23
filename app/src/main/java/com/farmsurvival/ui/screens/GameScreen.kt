@@ -1,5 +1,6 @@
 package com.farmsurvival.ui.screens
 
+import androidx.compose.animation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -11,6 +12,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -19,7 +22,6 @@ import androidx.compose.ui.unit.sp
 import com.farmsurvival.domain.model.GameAction
 import com.farmsurvival.domain.model.GameState
 import com.farmsurvival.domain.engine.GameEngine
-import kotlinx.coroutines.delay
 
 @Composable
 fun GameScreen(
@@ -29,70 +31,38 @@ fun GameScreen(
     onRestart: () -> Unit
 ) {
     var showRestartDialog by remember { mutableStateOf(false) }
-    var lastDayMessage by remember { mutableStateOf<String?>(null) }
 
-    // Show day message as toast-like notification
-    LaunchedEffect(gameState.day) {
-        if (gameState.dailyMessage != null) {
-            lastDayMessage = gameState.dailyMessage
-            delay(3000)
-            lastDayMessage = null
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+    ) {
+        // Top bar with day counter
+        GameTopBar(
+            day = gameState.day,
+            onStatsClick = onNavigateToStats,
+            onRestartClick = { showRestartDialog = true }
+        )
+
+        // Resources bar
+        ResourcesBar(resources = gameState.resources)
+
+        // Daily message
+        gameState.dailyMessage?.let { msg ->
+            DailyMessageCard(msg)
         }
-    }
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background)
-        ) {
-            // Top bar
-            GameTopBar(
-                day = gameState.day,
-                onStatsClick = onNavigateToStats,
-                onRestartClick = { showRestartDialog = true }
+        // Main content
+        if (gameState.isGameOver) {
+            GameOverContent(
+                gameState = gameState,
+                onRestart = onRestart
             )
-
-            // Resources
-            ResourcesBar(resources = gameState.resources)
-
-            // Content
-            if (gameState.isGameOver) {
-                GameOverContent(
-                    gameState = gameState,
-                    onRestart = onRestart,
-                    modifier = Modifier.weight(1f)
-                )
-            } else {
-                ActionsContent(
-                    gameState = gameState,
-                    onAction = onAction,
-                    lastMessage = gameState.lastActionMessage,
-                    modifier = Modifier.weight(1f)
-                )
-            }
-        }
-
-        // Day notification overlay (non-blocking)
-        lastDayMessage?.let { msg ->
-            Card(
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .padding(top = 80.dp)
-                    .padding(horizontal = 16.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.tertiaryContainer
-                ),
-                elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
-            ) {
-                Text(
-                    text = msg,
-                    modifier = Modifier.padding(16.dp),
-                    style = MaterialTheme.typography.bodyLarge,
-                    textAlign = TextAlign.Center,
-                    color = MaterialTheme.colorScheme.onTertiaryContainer
-                )
-            }
+        } else {
+            ActionsContent(
+                gameState = gameState,
+                onAction = onAction
+            )
         }
     }
 
@@ -156,13 +126,19 @@ private fun GameTopBar(
                 Spacer(modifier = Modifier.width(8.dp))
 
                 IconButton(onClick = onStatsClick) {
-                    Icon(Icons.Default.BarChart, contentDescription = "Статистика",
-                        tint = MaterialTheme.colorScheme.onPrimaryContainer)
+                    Icon(
+                        Icons.Default.BarChart,
+                        contentDescription = "Статистика",
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
                 }
 
                 IconButton(onClick = onRestartClick) {
-                    Icon(Icons.Default.Refresh, contentDescription = "Рестарт",
-                        tint = MaterialTheme.colorScheme.onPrimaryContainer)
+                    Icon(
+                        Icons.Default.Refresh,
+                        contentDescription = "Рестарт",
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
                 }
             }
         }
@@ -182,16 +158,38 @@ private fun ResourcesBar(resources: com.farmsurvival.domain.model.Resources) {
                 .padding(horizontal = 16.dp, vertical = 12.dp),
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
-            ResourceItem("💰", "Деньги", resources.money, Color(0xFFFFC107))
-            ResourceItem("🍞", "Еда", resources.food, Color(0xFF8D6E63))
-            ResourceItem("⚡", "Энергия", resources.energy, Color(0xFF2196F3))
+            ResourceItem(
+                icon = "💰",
+                label = "Деньги",
+                value = resources.money,
+                color = Color(0xFFFFC107)
+            )
+            ResourceItem(
+                icon = "🍞",
+                label = "Еда",
+                value = resources.food,
+                color = Color(0xFF8D6E63)
+            )
+            ResourceItem(
+                icon = "⚡",
+                label = "Энергия",
+                value = resources.energy,
+                color = Color(0xFF2196F3)
+            )
         }
     }
 }
 
 @Composable
-private fun ResourceItem(icon: String, label: String, value: Int, color: Color) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+private fun ResourceItem(
+    icon: String,
+    label: String,
+    value: Int,
+    color: Color
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
         Text(text = icon, fontSize = 24.sp)
         Text(
             text = "$value",
@@ -208,19 +206,55 @@ private fun ResourceItem(icon: String, label: String, value: Int, color: Color) 
 }
 
 @Composable
+private fun DailyMessageCard(message: String) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.tertiaryContainer
+        )
+    ) {
+        Text(
+            text = message,
+            modifier = Modifier.padding(16.dp),
+            style = MaterialTheme.typography.bodyLarge,
+            textAlign = TextAlign.Center,
+            color = MaterialTheme.colorScheme.onTertiaryContainer
+        )
+    }
+}
+
+@Composable
 private fun ActionsContent(
     gameState: GameState,
     onAction: (GameAction) -> Unit,
-    lastMessage: String?,
-    modifier: Modifier = Modifier
+    lastMessage: String? = null
 ) {
     Column(
-        modifier = modifier
+        modifier = Modifier
             .fillMaxWidth()
             .verticalScroll(rememberScrollState())
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
+        // Last action message at TOP of scroll area
+        lastMessage?.let { msg ->
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.secondaryContainer
+                )
+            ) {
+                Text(
+                    text = msg,
+                    modifier = Modifier.padding(12.dp),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                    maxLines = 2
+                )
+            }
+        }
         Text(
             text = "Выберите действие:",
             style = MaterialTheme.typography.titleMedium,
@@ -238,7 +272,7 @@ private fun ActionsContent(
         }
 
         // Last action message
-        lastMessage?.let { msg ->
+        gameState.lastActionMessage?.let { msg ->
             Spacer(modifier = Modifier.height(8.dp))
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -250,8 +284,7 @@ private fun ActionsContent(
                     text = msg,
                     modifier = Modifier.padding(16.dp),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSecondaryContainer,
-                    maxLines = 2
+                    color = MaterialTheme.colorScheme.onSecondaryContainer
                 )
             }
         }
@@ -271,8 +304,10 @@ private fun ActionCard(
         enabled = enabled,
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = if (enabled) MaterialTheme.colorScheme.surface
-            else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+            containerColor = if (enabled)
+                MaterialTheme.colorScheme.surface
+            else
+                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
@@ -282,7 +317,11 @@ private fun ActionCard(
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(text = action.icon, fontSize = 32.sp, modifier = Modifier.padding(end = 16.dp))
+            Text(
+                text = action.icon,
+                fontSize = 32.sp,
+                modifier = Modifier.padding(end = 16.dp)
+            )
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
@@ -320,8 +359,10 @@ private fun ActionCard(
             Icon(
                 Icons.Default.ChevronRight,
                 contentDescription = null,
-                tint = if (enabled) MaterialTheme.colorScheme.primary
-                else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
+                tint = if (enabled)
+                    MaterialTheme.colorScheme.primary
+                else
+                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
             )
         }
     }
@@ -330,38 +371,54 @@ private fun ActionCard(
 @Composable
 private fun GameOverContent(
     gameState: GameState,
-    onRestart: () -> Unit,
-    modifier: Modifier = Modifier
+    onRestart: () -> Unit
 ) {
     Column(
-        modifier = modifier
+        modifier = Modifier
             .fillMaxSize()
             .padding(32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Text(text = "💀", fontSize = 72.sp)
+        Text(
+            text = "💀",
+            fontSize = 72.sp
+        )
+
         Spacer(modifier = Modifier.height(16.dp))
+
         Text(
             text = "Игра окончена!",
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.error
         )
+
         Spacer(modifier = Modifier.height(8.dp))
+
         Text(
             text = gameState.gameOverReason ?: "",
             style = MaterialTheme.typography.bodyLarge,
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+
         Spacer(modifier = Modifier.height(16.dp))
+
         Card(
             modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.primaryContainer
+            )
         ) {
-            Column(modifier = Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(text = "Вы продержались", style = MaterialTheme.typography.bodyLarge)
+            Column(
+                modifier = Modifier.padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = "Вы продержались",
+                    style = MaterialTheme.typography.bodyLarge
+                )
                 Text(
                     text = "${gameState.day} дней",
                     style = MaterialTheme.typography.displaySmall,
@@ -370,11 +427,15 @@ private fun GameOverContent(
                 )
             }
         }
+
         Spacer(modifier = Modifier.height(24.dp))
+
         Button(
             onClick = onRestart,
             modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.primary
+            )
         ) {
             Icon(Icons.Default.Refresh, contentDescription = null)
             Spacer(modifier = Modifier.width(8.dp))
