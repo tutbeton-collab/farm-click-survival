@@ -19,6 +19,7 @@ import androidx.compose.ui.unit.sp
 import com.farmsurvival.domain.model.GameAction
 import com.farmsurvival.domain.model.GameState
 import com.farmsurvival.domain.engine.GameEngine
+import kotlinx.coroutines.delay
 
 @Composable
 fun GameScreen(
@@ -28,56 +29,66 @@ fun GameScreen(
     onRestart: () -> Unit
 ) {
     var showRestartDialog by remember { mutableStateOf(false) }
-    var showDayDialog by remember { mutableStateOf(false) }
-    var dayMessage by remember { mutableStateOf("") }
+    var lastDayMessage by remember { mutableStateOf<String?>(null) }
 
-    // Show day transition dialog
-    LaunchedEffect(gameState.dailyMessage) {
-        gameState.dailyMessage?.let {
-            dayMessage = it
-            showDayDialog = true
+    // Show day message as toast-like notification
+    LaunchedEffect(gameState.day) {
+        if (gameState.dailyMessage != null) {
+            lastDayMessage = gameState.dailyMessage
+            delay(3000)
+            lastDayMessage = null
         }
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-    ) {
-        // Top bar
-        GameTopBar(
-            day = gameState.day,
-            onStatsClick = onNavigateToStats,
-            onRestartClick = { showRestartDialog = true }
-        )
-
-        // Resources
-        ResourcesBar(resources = gameState.resources)
-
-        // Content
-        if (gameState.isGameOver) {
-            GameOverContent(gameState = gameState, onRestart = onRestart)
-        } else {
-            ActionsContent(
-                gameState = gameState,
-                onAction = onAction,
-                lastMessage = gameState.lastActionMessage
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
+        ) {
+            // Top bar
+            GameTopBar(
+                day = gameState.day,
+                onStatsClick = onNavigateToStats,
+                onRestartClick = { showRestartDialog = true }
             )
-        }
-    }
 
-    // Day transition dialog
-    if (showDayDialog) {
-        AlertDialog(
-            onDismissRequest = { showDayDialog = false },
-            title = { Text("📅 День ${gameState.day}") },
-            text = { Text(dayMessage) },
-            confirmButton = {
-                TextButton(onClick = { showDayDialog = false }) {
-                    Text("Понятно")
-                }
+            // Resources
+            ResourcesBar(resources = gameState.resources)
+
+            // Content
+            if (gameState.isGameOver) {
+                GameOverContent(gameState = gameState, onRestart = onRestart)
+            } else {
+                ActionsContent(
+                    gameState = gameState,
+                    onAction = onAction,
+                    lastMessage = gameState.lastActionMessage
+                )
             }
-        )
+        }
+
+        // Day notification overlay (non-blocking)
+        lastDayMessage?.let { msg ->
+            Card(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = 80.dp)
+                    .padding(horizontal = 16.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.tertiaryContainer
+                ),
+                elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+            ) {
+                Text(
+                    text = msg,
+                    modifier = Modifier.padding(16.dp),
+                    style = MaterialTheme.typography.bodyLarge,
+                    textAlign = TextAlign.Center,
+                    color = MaterialTheme.colorScheme.onTertiaryContainer
+                )
+            }
+        }
     }
 
     // Restart dialog
@@ -234,7 +245,7 @@ private fun ActionsContent(
                     modifier = Modifier.padding(16.dp),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSecondaryContainer,
-                    maxLines = 3
+                    maxLines = 2
                 )
             }
         }
